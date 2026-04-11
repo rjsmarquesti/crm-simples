@@ -9,6 +9,7 @@ import Settings     from './pages/Settings';
 import AdminLogin      from './pages/admin/AdminLogin';
 import AdminDashboard  from './pages/admin/AdminDashboard';
 import AdminClientes   from './pages/admin/AdminClientes';
+import AdminPerfil     from './pages/admin/AdminPerfil';
 
 function PrivateRoute({ children, roles }) {
   const { token, user } = useAuth();
@@ -42,6 +43,7 @@ export default function App() {
         {/* Rotas super admin */}
         <Route path="/admin"          element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/admin/clientes" element={<AdminRoute><AdminClientes /></AdminRoute>} />
+        <Route path="/admin/perfil"   element={<AdminRoute><AdminPerfil /></AdminRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
