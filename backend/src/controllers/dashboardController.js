@@ -2,17 +2,18 @@ const prisma = require('../lib/prisma');
 
 exports.stats = async (req, res, next) => {
   try {
+    const tenantId = req.user.tenantId;
     const hoje = new Date().toISOString().split('T')[0];
 
     const [totalLeads, leadsNovos, convertidos, agendamentosHoje, leadsRecentes, agendamentosDodia] =
       await Promise.all([
-        prisma.lead.count(),
-        prisma.lead.count({ where: { status: 'novo' } }),
-        prisma.lead.count({ where: { status: 'convertido' } }),
-        prisma.agendamento.count({ where: { data: hoje } }),
-        prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
+        prisma.lead.count({ where: { tenantId } }),
+        prisma.lead.count({ where: { tenantId, status: 'novo' } }),
+        prisma.lead.count({ where: { tenantId, status: 'convertido' } }),
+        prisma.agendamento.count({ where: { tenantId, data: hoje } }),
+        prisma.lead.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' }, take: 5 }),
         prisma.agendamento.findMany({
-          where: { data: hoje },
+          where: { tenantId, data: hoje },
           orderBy: { hora: 'asc' },
           include: { lead: { select: { nome: true, telefone: true } } },
         }),

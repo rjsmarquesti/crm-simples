@@ -5,16 +5,13 @@ const incluirLead = { lead: { select: { nome: true, telefone: true, email: true 
 
 exports.listar = async (req, res, next) => {
   try {
-    const { data, status, lead_id } = req.query;
-    const where = {};
-    if (data) where.data = data;
-    if (status) where.status = status;
-    if (lead_id) where.leadId = Number(lead_id);
+    const where = { tenantId: req.user.tenantId };
+    if (req.query.data) where.data = req.query.data;
+    if (req.query.status) where.status = req.query.status;
+    if (req.query.lead_id) where.leadId = Number(req.query.lead_id);
 
     const agendamentos = await prisma.agendamento.findMany({
-      where,
-      orderBy: [{ data: 'asc' }, { hora: 'asc' }],
-      include: incluirLead,
+      where, orderBy: [{ data: 'asc' }, { hora: 'asc' }], include: incluirLead,
     });
     res.json({ agendamentos });
   } catch (err) { next(err); }
@@ -22,9 +19,8 @@ exports.listar = async (req, res, next) => {
 
 exports.buscarPorId = async (req, res, next) => {
   try {
-    const agendamento = await prisma.agendamento.findUnique({
-      where: { id: Number(req.params.id) },
-      include: incluirLead,
+    const agendamento = await prisma.agendamento.findFirst({
+      where: { id: Number(req.params.id), tenantId: req.user.tenantId }, include: incluirLead,
     });
     if (!agendamento) return res.status(404).json({ error: 'Agendamento não encontrado' });
     res.json({ agendamento });
@@ -38,7 +34,7 @@ exports.criar = async (req, res, next) => {
 
     const { lead_id, data, hora, tipo, status, observacoes } = req.body;
     const agendamento = await prisma.agendamento.create({
-      data: { leadId: Number(lead_id), data, hora, tipo: tipo || 'reunião', status: status || 'marcado', observacoes },
+      data: { tenantId: req.user.tenantId, leadId: Number(lead_id), data, hora, tipo: tipo || 'reunião', status: status || 'marcado', observacoes },
       include: incluirLead,
     });
     res.status(201).json({ agendamento });
@@ -51,24 +47,24 @@ exports.atualizar = async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { lead_id, data, hora, tipo, status, observacoes } = req.body;
+    const existe = await prisma.agendamento.findFirst({ where: { id: Number(req.params.id), tenantId: req.user.tenantId } });
+    if (!existe) return res.status(404).json({ error: 'Agendamento não encontrado' });
+
     const agendamento = await prisma.agendamento.update({
       where: { id: Number(req.params.id) },
       data: { leadId: Number(lead_id), data, hora, tipo, status, observacoes },
       include: incluirLead,
     });
     res.json({ agendamento });
-  } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ error: 'Agendamento não encontrado' });
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 exports.deletar = async (req, res, next) => {
   try {
+    const existe = await prisma.agendamento.findFirst({ where: { id: Number(req.params.id), tenantId: req.user.tenantId } });
+    if (!existe) return res.status(404).json({ error: 'Agendamento não encontrado' });
+
     await prisma.agendamento.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Agendamento removido' });
-  } catch (err) {
-    if (err.code === 'P2025') return res.status(404).json({ error: 'Agendamento não encontrado' });
-    next(err);
-  }
+  } catch (err) { next(err); }
 };

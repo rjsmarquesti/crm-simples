@@ -9,19 +9,32 @@ exports.login = async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { email, senha } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ error: 'Email ou senha incorretos' });
+    const tenantId = req.tenant?.id || null;
+
+    // Busca por email + tenant (ou super_admin sem tenant)
+    const user = await prisma.user.findFirst({
+      where: tenantId
+        ? { email, tenantId }
+        : { email, role: 'super_admin' },
+      include: { tenant: { select: { nome: true, slug: true, corPrimaria: true, logo: true, modulos: true, plano: true } } },
+    });
+
+    if (!user || !user.ativo) return res.status(401).json({ error: 'Email ou senha incorretos' });
 
     const ok = await bcrypt.compare(senha, user.senha);
     if (!ok) return res.status(401).json({ error: 'Email ou senha incorretos' });
 
     const token = jwt.sign(
-      { id: user.id, nome: user.nome, email: user.email },
+      { id: user.id, nome: user.nome, email: user.email, role: user.role, tenantId: user.tenantId },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    res.json({ token, user: { id: user.id, nome: user.nome, email: user.email } });
+    res.json({
+      token,
+      user: { id: user.id, nome: user.nome, email: user.email, role: user.role },
+      tenant: user.tenant,
+    });
   } catch (err) { next(err); }
 };
 

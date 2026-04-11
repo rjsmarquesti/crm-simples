@@ -7,18 +7,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Tenant (empresa compradora) ────────────────────────────────────────────
+model Tenant {
+  id          Int           @id @default(autoincrement())
+  nome        String        @db.VarChar(100)
+  slug        String        @unique @db.VarChar(50)
+  logo        String?       @db.VarChar(500)
+  corPrimaria String        @default("#2563eb") @map("cor_primaria") @db.VarChar(7)
+  plano       Plano         @default(basico)
+  modulos     Json          @default("[\"leads\",\"agendamentos\"]")
+  ativo       Boolean       @default(true)
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  users        User[]
+  leads        Lead[]
+  agendamentos Agendamento[]
+
+  @@map("tenants")
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
 model User {
   id        Int      @id @default(autoincrement())
+  tenantId  Int?     @map("tenant_id")
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   nome      String   @db.VarChar(100)
-  email     String   @unique @db.VarChar(150)
+  email     String   @db.VarChar(150)
   senha     String   @db.VarChar(255)
+  role      Role     @default(atendente)
+  ativo     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([email, tenantId])
   @@map("users")
 }
 
+// ─── Lead ────────────────────────────────────────────────────────────────────
 model Lead {
   id           Int           @id @default(autoincrement())
+  tenantId     Int           @map("tenant_id")
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   nome         String        @db.VarChar(100)
   telefone     String?       @db.VarChar(20)
   email        String?       @db.VarChar(150)
@@ -32,8 +60,11 @@ model Lead {
   @@map("leads")
 }
 
+// ─── Agendamento ─────────────────────────────────────────────────────────────
 model Agendamento {
   id          Int         @id @default(autoincrement())
+  tenantId    Int         @map("tenant_id")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   leadId      Int         @map("lead_id")
   lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   data        String      @db.VarChar(10)
@@ -45,6 +76,19 @@ model Agendamento {
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   @@map("agendamentos")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+enum Plano {
+  basico
+  pro
+  premium
+}
+
+enum Role {
+  super_admin
+  admin
+  atendente
 }
 
 enum StatusLead {
