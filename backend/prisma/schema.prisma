@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  senha     String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Lead {
+  id           Int           @id @default(autoincrement())
+  nome         String        @db.VarChar(100)
+  telefone     String?       @db.VarChar(20)
+  email        String?       @db.VarChar(150)
+  origem       String?       @db.VarChar(50)
+  status       StatusLead    @default(novo)
+  observacoes  String?       @db.Text
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  agendamentos Agendamento[]
+
+  @@map("leads")
+}
+
+model Agendamento {
+  id          Int         @id @default(autoincrement())
+  leadId      Int         @map("lead_id")
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  data        String      @db.VarChar(10)
+  hora        String      @db.VarChar(5)
+  tipo        String?     @default("reunião") @db.VarChar(100)
+  status      StatusAgend @default(marcado)
+  observacoes String?     @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("agendamentos")
+}
+
+enum StatusLead {
+  novo
+  contato
+  agendado
+  convertido
+  perdido
+}
+
+enum StatusAgend {
+  marcado
+  confirmado
+  cancelado
+  realizado
+}
