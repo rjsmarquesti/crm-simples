@@ -4,14 +4,21 @@ const ctrl = require('../controllers/tenantsController');
 const auth = require('../middlewares/auth');
 const { requireRole } = auth;
 
-// Apenas super_admin acessa essas rotas
-router.get('/',    auth, requireRole('super_admin'), ctrl.listar);
-router.get('/:id', auth, requireRole('super_admin'), ctrl.buscarPorId);
-router.post('/',   auth, requireRole('super_admin'), [
-  body('nome').notEmpty(),
-  body('slug').notEmpty().matches(/^[a-z0-9-]+$/).withMessage('Slug inválido (use apenas letras, números e -)')
-], ctrl.criar);
-router.put('/:id',    auth, requireRole('super_admin'), ctrl.atualizar);
-router.delete('/:id', auth, requireRole('super_admin'), ctrl.deletar);
+const onlySuper = [auth, requireRole('super_admin')];
+
+const validarTenant = [
+  body('nome').notEmpty().withMessage('Nome obrigatório'),
+  body('slug').notEmpty().matches(/^[a-z0-9-]+$/).withMessage('Slug: use apenas letras minúsculas, números e -'),
+];
+
+router.get('/',    ...onlySuper, ctrl.listar);
+router.get('/:id', ...onlySuper, ctrl.buscarPorId);
+router.post('/',   ...onlySuper, validarTenant, ctrl.criar);
+router.put('/:id', ...onlySuper, ctrl.atualizar);
+router.delete('/:id', ...onlySuper, ctrl.deletar);
+
+// Usuários do tenant
+router.post('/:id/usuarios',              ...onlySuper, ctrl.criarUsuario);
+router.put('/:id/usuarios/:userId/senha', ...onlySuper, ctrl.resetarSenha);
 
 module.exports = router;
