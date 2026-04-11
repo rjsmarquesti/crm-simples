@@ -73,7 +73,7 @@ export default function AdminLogin() {
             </button>
           </form>
         </div>
-        <p className="text-center text-slate-600 text-xs mt-4">Divulga BR — Sistema de CRM</p>
+        <p className="text-center text-slate-600 text-xs mt-4">Divulga BR — CRM Divulga BR</p>
       </div>
     </div>
   );
