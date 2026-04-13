@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,14 +11,35 @@ const nav = [
 export default function AdminLayout({ children, title, subtitle }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-slate-950">
+
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 min-h-screen bg-slate-900 border-r border-slate-800 flex flex-col fixed left-0 top-0 z-30">
+      <aside className={`
+        w-64 min-h-screen bg-slate-900 border-r border-slate-800 flex flex-col
+        fixed left-0 top-0 z-30 transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:translate-x-0
+        no-print
+      `}>
+        {/* Fechar mobile */}
+        <button onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 text-slate-500 hover:text-white md:hidden">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
               </svg>
@@ -30,6 +52,7 @@ export default function AdminLayout({ children, title, subtitle }) {
         <nav className="flex-1 p-4 space-y-1">
           {nav.map(({ to, label, icon, exact }) => (
             <NavLink key={to} to={to} end={exact}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium
                 ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`
@@ -56,20 +79,29 @@ export default function AdminLayout({ children, title, subtitle }) {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 ml-64 flex flex-col">
-        <header className="bg-slate-900 border-b border-slate-800 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-          <div>
-            <h1 className="text-lg font-bold text-white">{title}</h1>
-            {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
+      <main className="flex-1 md:ml-64 flex flex-col min-w-0">
+        <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-20 no-print">
+          <div className="flex items-center gap-3">
+            {/* Hambúrguer mobile */}
+            <button onClick={() => setSidebarOpen(true)}
+              className="md:hidden text-slate-400 hover:text-white p-1">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-base md:text-lg font-bold text-white leading-tight">{title}</h1>
+              {subtitle && <p className="text-xs md:text-sm text-slate-400 hidden sm:block">{subtitle}</p>}
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {user?.nome?.[0]?.toUpperCase()}
             </div>
-            <span className="text-sm text-slate-400">{user?.email}</span>
+            <span className="text-sm text-slate-400 hidden sm:block">{user?.email}</span>
           </div>
         </header>
-        <div className="flex-1 p-8">{children}</div>
+        <div className="flex-1 p-4 md:p-8">{children}</div>
       </main>
     </div>
   );

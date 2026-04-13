@@ -107,22 +107,82 @@ export default function AdminClientes() {
 
   return (
     <AdminLayout title="Clientes" subtitle="Gerencie todas as empresas cadastradas">
+
+      {/* Header impressão */}
+      <div className="print-only">
+        <div style={{ borderBottom: '2px solid #334155', paddingBottom: 12, marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>Divulga BR — Painel Administrativo</div>
+          <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>Lista de Clientes</div>
+          <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>
+            Emitido em {new Date().toLocaleDateString('pt-BR', { dateStyle: 'full' })} · {filtrados.length} cliente(s)
+          </div>
+        </div>
+      </div>
+
       {/* Toolbar */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-6 no-print">
         <input value={busca} onChange={e => setBusca(e.target.value)}
           placeholder="Buscar por nome ou slug..."
           className="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-700 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <button onClick={() => window.print()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-sm transition">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          PDF
+        </button>
         <button onClick={abrirNovo}
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 transition">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Novo Cliente
+          <span className="hidden sm:inline">Novo Cliente</span>
+          <span className="sm:hidden">Novo</span>
         </button>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      {/* Cards mobile */}
+      <div className="md:hidden space-y-3 mb-4 no-print">
+        {filtrados.length === 0
+          ? <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-500">Nenhum cliente encontrado</div>
+          : filtrados.map(t => (
+            <div key={t.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {t.logo
+                    ? <img src={t.logo} alt={t.nome} className="w-10 h-10 rounded-xl object-contain bg-slate-800 p-1 flex-shrink-0" />
+                    : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                        style={{ backgroundColor: t.corPrimaria || '#2563eb' }}>
+                        {t.nome[0]}
+                      </div>
+                  }
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{t.nome}</p>
+                    <p className="text-slate-500 text-xs font-mono">{t.slug}</p>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${t.ativo ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                  {t.ativo ? 'Ativo' : 'Inativo'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${PLANO_COLOR[t.plano]}`}>{t.plano}</span>
+                <span className="text-slate-400 text-xs">{t._count?.leads || 0} leads</span>
+                <span className="text-slate-400 text-xs">· {t._count?.users || 0} usuários</span>
+              </div>
+              <div className="flex items-center gap-1 border-t border-slate-800 pt-3">
+                <button onClick={() => abrirDetalhe(t)} className="flex-1 text-slate-400 hover:text-white text-xs py-1.5 rounded-lg hover:bg-slate-800 transition text-center">Ver</button>
+                <button onClick={() => abrirEditar(t)} className="flex-1 text-blue-400 hover:text-blue-300 text-xs py-1.5 rounded-lg hover:bg-slate-800 transition text-center">Editar</button>
+                <button onClick={() => abrirUsuario(t)} className="flex-1 text-green-400 hover:text-green-300 text-xs py-1.5 rounded-lg hover:bg-slate-800 transition text-center">+ Usuário</button>
+                <button onClick={() => deletarTenant(t)} className="flex-1 text-red-500 hover:text-red-400 text-xs py-1.5 rounded-lg hover:bg-slate-800 transition text-center">Remover</button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {/* Tabela desktop + impressão */}
+      <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-800">
@@ -132,7 +192,7 @@ export default function AdminClientes() {
               <th className="px-6 py-4">Leads</th>
               <th className="px-6 py-4">Usuários</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Ações</th>
+              <th className="px-6 py-4 no-print">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -142,10 +202,13 @@ export default function AdminClientes() {
                 <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                        style={{ backgroundColor: t.corPrimaria || '#2563eb' }}>
-                        {t.nome[0]}
-                      </div>
+                      {t.logo
+                        ? <img src={t.logo} alt={t.nome} className="w-9 h-9 rounded-xl object-contain bg-slate-800 p-1 flex-shrink-0" />
+                        : <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                            style={{ backgroundColor: t.corPrimaria || '#2563eb' }}>
+                            {t.nome[0]}
+                          </div>
+                      }
                       <div>
                         <p className="text-white font-medium text-sm">{t.nome}</p>
                         <p className="text-slate-500 text-xs">{t.corPrimaria}</p>
@@ -164,24 +227,20 @@ export default function AdminClientes() {
                       {t.ativo ? 'Ativo' : 'Inativo'}
                     </button>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 no-print">
                     <div className="flex items-center gap-1">
-                      {/* Detalhe */}
                       <button onClick={() => abrirDetalhe(t)} title="Ver detalhes"
                         className="text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                       </button>
-                      {/* Editar */}
                       <button onClick={() => abrirEditar(t)} title="Editar"
                         className="text-blue-400 hover:text-blue-300 hover:bg-slate-700 p-2 rounded-lg transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                       </button>
-                      {/* Novo usuário */}
                       <button onClick={() => abrirUsuario(t)} title="Adicionar usuário"
                         className="text-green-400 hover:text-green-300 hover:bg-slate-700 p-2 rounded-lg transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                       </button>
-                      {/* Deletar */}
                       <button onClick={() => deletarTenant(t)} title="Remover"
                         className="text-red-500 hover:text-red-400 hover:bg-slate-700 p-2 rounded-lg transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
