@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children, title, subtitle }) {
   const { user, tenant, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const cor = tenant?.corPrimaria || '#2563eb';
   const modulos = tenant?.modulos || ['leads', 'agendamentos'];
 
@@ -21,9 +24,32 @@ export default function Layout({ children, title, subtitle }) {
     return true;
   });
 
+  function closeSidebar() { setSidebarOpen(false); }
+
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <aside className="w-64 min-h-screen bg-gray-900 text-white flex flex-col fixed left-0 top-0 z-30">
+
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={closeSidebar} />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        w-64 min-h-screen bg-gray-900 text-white flex flex-col
+        fixed left-0 top-0 z-30 transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:translate-x-0
+        no-print
+      `}>
+        {/* Fechar (mobile) */}
+        <button onClick={closeSidebar}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white md:hidden">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <div className="p-6 border-b border-gray-700">
           <div className="flex items-center gap-3">
             {tenant?.logo
@@ -42,6 +68,7 @@ export default function Layout({ children, title, subtitle }) {
         <nav className="flex-1 p-4 space-y-1">
           {itemsVisiveis.map(({ to, label, icon }) => (
             <NavLink key={to} to={to} end={to === '/'}
+              onClick={closeSidebar}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-sm
                 ${isActive ? 'text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
@@ -68,20 +95,30 @@ export default function Layout({ children, title, subtitle }) {
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 flex flex-col">
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-            {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-          </div>
+      {/* Main */}
+      <main className="flex-1 md:ml-64 flex flex-col min-w-0">
+        <header className="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-20 no-print">
+          {/* Hambúrguer (mobile) */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ backgroundColor: cor }}>
+            <button onClick={() => setSidebarOpen(true)}
+              className="md:hidden text-gray-500 hover:text-gray-900 p-1">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">{title}</h1>
+              {subtitle && <p className="text-xs md:text-sm text-gray-500 hidden sm:block">{subtitle}</p>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0" style={{ backgroundColor: cor }}>
               {user?.nome?.[0]?.toUpperCase() || 'U'}
             </div>
-            <span className="text-sm font-medium text-gray-700">{user?.nome}</span>
+            <span className="text-sm font-medium text-gray-700 hidden sm:block">{user?.nome}</span>
           </div>
         </header>
-        <div className="flex-1 p-8">{children}</div>
+        <div className="flex-1 p-4 md:p-8">{children}</div>
       </main>
     </div>
   );
