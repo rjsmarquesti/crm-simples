@@ -6,9 +6,14 @@ import { BadgeLead } from '../components/Badge';
 import { api } from '../services/api';
 
 const STATUS_OPTIONS = ['novo', 'contato', 'agendado', 'convertido', 'perdido'];
-const EMPTY_FORM = { nome: '', telefone: '', email: '', origem: '', status: 'novo', observacoes: '' };
+const EMPTY_FORM = {
+  nome: '', telefone: '', email: '', origem: '', status: 'novo', observacoes: '',
+  cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+};
 
 function LeadForm({ form, setForm, onSubmit, loading }) {
+  const [buscandoCep, setBuscandoCep] = useState(false);
+
   const field = (id, label, type = 'text', extra = {}) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
@@ -16,6 +21,25 @@ function LeadForm({ form, setForm, onSubmit, loading }) {
         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" {...extra} />
     </div>
   );
+
+  async function buscarCep(cep) {
+    const limpo = cep.replace(/\D/g, '');
+    if (limpo.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
+      const data = await res.json();
+      if (data.erro) { toast.error('CEP não encontrado'); return; }
+      setForm(f => ({
+        ...f,
+        logradouro: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || '',
+      }));
+    } catch { toast.error('Erro ao buscar CEP'); }
+    finally { setBuscandoCep(false); }
+  }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -34,6 +58,52 @@ function LeadForm({ form, setForm, onSubmit, loading }) {
           </select>
         </div>
       </div>
+
+      {/* Endereço */}
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Endereço <span className="font-normal text-gray-400">(opcional)</span></p>
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          <div className="col-span-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+            <div className="relative">
+              <input
+                type="text" value={form.cep}
+                onChange={e => setForm(f => ({ ...f, cep: e.target.value }))}
+                onBlur={e => buscarCep(e.target.value)}
+                placeholder="00000-000"
+                maxLength={9}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 pr-8"
+              />
+              {buscandoCep && (
+                <svg className="animate-spin w-4 h-4 text-blue-500 absolute right-2 top-3" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              )}
+            </div>
+          </div>
+          <div className="col-span-2">
+            {field('logradouro', 'Logradouro', 'text', { placeholder: 'Rua, Av...' })}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          {field('numero', 'Número', 'text', { placeholder: '123' })}
+          {field('complemento', 'Complemento', 'text', { placeholder: 'Apto, Sala...' })}
+          {field('bairro', 'Bairro', 'text', {})}
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            {field('cidade', 'Cidade', 'text', {})}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+            <input type="text" value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value.toUpperCase().slice(0, 2) }))}
+              placeholder="SP" maxLength={2}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 uppercase" />
+          </div>
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
         <textarea rows={3} value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))}
@@ -80,7 +150,13 @@ export default function Leads() {
     try {
       const data = await api.get(`/leads/${id}`);
       const l = data.lead;
-      setForm({ nome: l.nome, telefone: l.telefone || '', email: l.email || '', origem: l.origem || '', status: l.status, observacoes: l.observacoes || '' });
+      setForm({
+        nome: l.nome, telefone: l.telefone || '', email: l.email || '',
+        origem: l.origem || '', status: l.status, observacoes: l.observacoes || '',
+        cep: l.cep || '', logradouro: l.logradouro || '', numero: l.numero || '',
+        complemento: l.complemento || '', bairro: l.bairro || '',
+        cidade: l.cidade || '', estado: l.estado || '',
+      });
       setEditId(id);
       setModalOpen(true);
     } catch (err) { toast.error(err.message); }
@@ -120,7 +196,6 @@ export default function Leads() {
 
   return (
     <Layout title="Leads" subtitle="Gerencie seus contatos e oportunidades">
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <input type="text" placeholder="Buscar por nome, telefone ou email..."
           value={busca} onChange={e => setBusca(e.target.value)}
@@ -139,9 +214,8 @@ export default function Leads() {
         </button>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-100">
           <span className="text-sm text-gray-500 font-medium">{total} lead(s) encontrado(s)</span>
         </div>
         <div className="overflow-x-auto">
@@ -150,7 +224,7 @@ export default function Leads() {
               <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
                 <th className="px-6 py-3">Nome</th>
                 <th className="px-6 py-3">Telefone</th>
-                <th className="px-6 py-3">Email</th>
+                <th className="px-6 py-3">Cidade</th>
                 <th className="px-6 py-3">Origem</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Ações</th>
@@ -163,10 +237,12 @@ export default function Leads() {
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{l.nome}</div>
-                    <div className="text-xs text-gray-400">#{l.id}</div>
+                    <div className="text-xs text-gray-400">{l.email || `#${l.id}`}</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{l.telefone || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{l.email || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {l.cidade ? `${l.cidade}${l.estado ? ` / ${l.estado}` : ''}` : '-'}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{l.origem || '-'}</td>
                   <td className="px-6 py-4"><BadgeLead status={l.status} /></td>
                   <td className="px-6 py-4">

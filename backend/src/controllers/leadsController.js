@@ -1,5 +1,12 @@
 const { validationResult } = require('express-validator');
 const prisma = require('../lib/prisma');
+const { dispararWebhook } = require('../services/webhook');
+
+const CAMPOS_ENDERECO = ['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado'];
+
+function extrairEndereco(body) {
+  return Object.fromEntries(CAMPOS_ENDERECO.map(k => [k, body[k] || null]));
+}
 
 exports.listar = async (req, res, next) => {
   try {
@@ -38,8 +45,16 @@ exports.criar = async (req, res, next) => {
 
     const { nome, telefone, email, origem, status, observacoes } = req.body;
     const lead = await prisma.lead.create({
-      data: { tenantId: req.user.tenantId, nome, telefone, email, origem, status: status || 'novo', observacoes },
+      data: {
+        tenantId: req.user.tenantId,
+        nome, telefone, email, origem,
+        status: status || 'novo',
+        observacoes,
+        ...extrairEndereco(req.body),
+      },
     });
+
+    dispararWebhook(req.user.tenantId, 'lead.criado', lead);
     res.status(201).json({ lead });
   } catch (err) { next(err); }
 };
@@ -53,7 +68,13 @@ exports.atualizar = async (req, res, next) => {
     const existe = await prisma.lead.findFirst({ where: { id: Number(req.params.id), tenantId: req.user.tenantId } });
     if (!existe) return res.status(404).json({ error: 'Lead não encontrado' });
 
-    const lead = await prisma.lead.update({ where: { id: Number(req.params.id) }, data: { nome, telefone, email, origem, status, observacoes } });
+    const lead = await prisma.lead.update({
+      where: { id: Number(req.params.id) },
+      data: { nome, telefone, email, origem, status, observacoes, ...extrairEndereco(req.body) },
+    });
+
+    const evento = existe.status !== status ? 'lead.status_alterado' : 'lead.atualizado';
+    dispararWebhook(req.user.tenantId, evento, lead);
     res.json({ lead });
   } catch (err) { next(err); }
 };

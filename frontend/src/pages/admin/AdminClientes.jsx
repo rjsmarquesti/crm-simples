@@ -8,7 +8,7 @@ const PLANO_COLOR = { basico: 'bg-slate-700 text-slate-300', pro: 'bg-blue-900 t
 const CORES = ['#2563eb','#7c3aed','#db2777','#dc2626','#ea580c','#16a34a','#0891b2','#1e293b'];
 const MODULOS = [{ id: 'leads', label: 'Leads' }, { id: 'agendamentos', label: 'Agendamentos' }];
 
-const EMPTY_TENANT = { nome: '', slug: '', corPrimaria: '#2563eb', plano: 'basico', modulos: ['leads','agendamentos'], ativo: true };
+const EMPTY_TENANT = { nome: '', slug: '', logo: '', corPrimaria: '#2563eb', plano: 'basico', modulos: ['leads','agendamentos'], ativo: true };
 const EMPTY_USER   = { nome: '', email: '', senha: '', role: 'admin' };
 const EMPTY_SENHA  = { novaSenha: '', confirmar: '' };
 
@@ -37,7 +37,7 @@ export default function AdminClientes() {
 
   // ── Tenant ──────────────────────────────────────────────────────────────
   function abrirNovo()    { setFT(EMPTY_TENANT); setModal('novo'); }
-  function abrirEditar(t) { setFT({ nome: t.nome, slug: t.slug, corPrimaria: t.corPrimaria, plano: t.plano, modulos: t.modulos || [], ativo: t.ativo }); setSelected(t); setModal('editar'); }
+  function abrirEditar(t) { setFT({ nome: t.nome, slug: t.slug, logo: t.logo || '', corPrimaria: t.corPrimaria, plano: t.plano, modulos: t.modulos || [], ativo: t.ativo }); setSelected(t); setModal('editar'); }
 
   async function salvarTenant(e) {
     e.preventDefault();
@@ -211,6 +211,14 @@ export default function AdminClientes() {
                 placeholder="minha-empresa"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 bg-gray-50 font-mono" />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">URL da Logo <span className="font-normal text-gray-400">(opcional)</span></label>
+            <input type="url" value={formTenant.logo}
+              onChange={e => setFT(f => ({ ...f, logo: e.target.value }))}
+              placeholder="https://..."
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 bg-gray-50" />
+            {formTenant.logo && <img src={formTenant.logo} alt="preview" className="mt-2 h-10 object-contain rounded-lg border bg-gray-50 p-1" />}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Plano</label>

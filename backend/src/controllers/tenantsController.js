@@ -27,10 +27,11 @@ exports.buscarPorId = async (req, res, next) => {
 
 exports.criar = async (req, res, next) => {
   try {
-    const { nome, slug, corPrimaria, plano, modulos } = req.body;
+    const { nome, slug, logo, corPrimaria, plano, modulos } = req.body;
     const tenant = await prisma.tenant.create({
       data: {
         nome, slug,
+        logo: logo || null,
         corPrimaria: corPrimaria || '#2563eb',
         plano: plano || 'basico',
         modulos: modulos || ['leads', 'agendamentos'],
@@ -45,10 +46,10 @@ exports.criar = async (req, res, next) => {
 
 exports.atualizar = async (req, res, next) => {
   try {
-    const { nome, slug, corPrimaria, plano, modulos, ativo } = req.body;
+    const { nome, slug, logo, corPrimaria, plano, modulos, ativo } = req.body;
     const tenant = await prisma.tenant.update({
       where: { id: Number(req.params.id) },
-      data: { nome, slug, corPrimaria, plano, modulos, ativo },
+      data: { nome, slug, logo: logo || null, corPrimaria, plano, modulos, ativo },
     });
     res.json({ tenant });
   } catch (err) {

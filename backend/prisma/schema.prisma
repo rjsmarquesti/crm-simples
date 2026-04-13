@@ -16,8 +16,11 @@ model Tenant {
   corPrimaria String        @default("#2563eb") @map("cor_primaria") @db.VarChar(7)
   plano       Plano         @default(basico)
   modulos     Json          @default("[\"leads\",\"agendamentos\"]")
-  ativo       Boolean       @default(true)
-  createdAt   DateTime      @default(now()) @map("created_at")
+  ativo           Boolean  @default(true)
+  n8nWebhookUrl   String?  @map("n8n_webhook_url") @db.VarChar(500)
+  n8nApiKey       String?  @map("n8n_api_key") @db.VarChar(255)
+  apiToken        String?  @unique @map("api_token") @db.VarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at")
 
   users        User[]
   leads        Lead[]
@@ -52,9 +55,16 @@ model Lead {
   email        String?       @db.VarChar(150)
   origem       String?       @db.VarChar(50)
   status       StatusLead    @default(novo)
-  observacoes  String?       @db.Text
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  observacoes  String?  @db.Text
+  cep          String?  @db.VarChar(9)
+  logradouro   String?  @db.VarChar(200)
+  numero       String?  @db.VarChar(20)
+  complemento  String?  @db.VarChar(100)
+  bairro       String?  @db.VarChar(100)
+  cidade       String?  @db.VarChar(100)
+  estado       String?  @db.VarChar(2)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
   agendamentos Agendamento[]
 
   @@map("leads")

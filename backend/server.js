@@ -12,6 +12,9 @@ app.use('/api/auth', require('./src/routes/auth'));
 // Rotas super admin (sem tenant middleware)
 app.use('/api/admin/tenants', require('./src/routes/tenants'));
 
+// Rotas de integração n8n (autenticadas por API token, sem tenant middleware JWT)
+app.use('/api/n8n', require('./src/routes/n8n'));
+
 // Rotas protegidas por tenant
 const tenantMiddleware = require('./src/middlewares/tenant');
 app.use('/api/leads',        tenantMiddleware, require('./src/routes/leads'));
