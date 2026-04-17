@@ -145,13 +145,19 @@ router.post('/agendar', resolverTenant, async (req, res, next) => {
 // ── Webhook de notificação (fire-and-forget) ─────────────────────────────────
 async function dispararWebhookNotificacao(tenant, agendamento) {
   if (!tenant.n8nWebhookUrl) return;
+  const config = await prisma.configuracaoAgenda.findUnique({ where: { tenantId: tenant.id } });
   await fetch(tenant.n8nWebhookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(tenant.n8nApiKey ? { 'X-N8N-API-Key': tenant.n8nApiKey } : {}),
     },
-    body: JSON.stringify({ evento: 'agendamento_criado', agendamento, tenant: { id: tenant.id, nome: tenant.nome, slug: tenant.slug } }),
+    body: JSON.stringify({
+      evento: 'agendamento_criado',
+      agendamento,
+      tenant: { id: tenant.id, nome: tenant.nome, slug: tenant.slug },
+      config: { whatsappAdmin: config?.whatsappAdmin || null },
+    }),
   });
 }
 
