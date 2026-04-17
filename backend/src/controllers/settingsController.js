@@ -20,6 +20,30 @@ exports.update = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// GET configuração de agenda do tenant
+exports.getAgenda = async (req, res, next) => {
+  try {
+    let config = await prisma.configuracaoAgenda.findUnique({ where: { tenantId: req.user.tenantId } });
+    if (!config) {
+      config = await prisma.configuracaoAgenda.create({ data: { tenantId: req.user.tenantId } });
+    }
+    res.json({ config });
+  } catch (err) { next(err); }
+};
+
+// PUT configuração de agenda do tenant
+exports.updateAgenda = async (req, res, next) => {
+  try {
+    const { horarioInicio, horarioFim, duracaoSlot, diasUteis, antecedenciaMin, antecedenciaMax, mensagemConfirmacao, whatsappAdmin, ativo } = req.body;
+    const config = await prisma.configuracaoAgenda.upsert({
+      where: { tenantId: req.user.tenantId },
+      update: { horarioInicio, horarioFim, duracaoSlot: Number(duracaoSlot), diasUteis, antecedenciaMin: Number(antecedenciaMin), antecedenciaMax: Number(antecedenciaMax), mensagemConfirmacao: mensagemConfirmacao || null, whatsappAdmin: whatsappAdmin || null, ativo: ativo !== false },
+      create: { tenantId: req.user.tenantId, horarioInicio, horarioFim, duracaoSlot: Number(duracaoSlot), diasUteis, antecedenciaMin: Number(antecedenciaMin), antecedenciaMax: Number(antecedenciaMax), mensagemConfirmacao: mensagemConfirmacao || null, whatsappAdmin: whatsappAdmin || null },
+    });
+    res.json({ config });
+  } catch (err) { next(err); }
+};
+
 // Gera ou regenera o API token do tenant (para n8n chamar o CRM)
 exports.gerarApiToken = async (req, res, next) => {
   try {

@@ -7,8 +7,25 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const STATUS_OPTIONS = ['marcado', 'confirmado', 'cancelado', 'realizado'];
+const CANAL_OPTIONS  = ['manual', 'web', 'whatsapp'];
 const hoje = new Date().toISOString().split('T')[0];
 const EMPTY_FORM = { lead_id: '', data: hoje, hora: '', tipo: '', status: 'marcado', observacoes: '' };
+
+// Badge de canal de origem
+const CANAL_STYLE = {
+  manual:    { bg: 'bg-gray-100',   text: 'text-gray-600',   label: 'Manual',    icon: '👤' },
+  web:       { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Web',       icon: '🌐' },
+  whatsapp:  { bg: 'bg-green-100',  text: 'text-green-700',  label: 'WhatsApp',  icon: '💬' },
+};
+
+function BadgeCanal({ canal }) {
+  const s = CANAL_STYLE[canal] || CANAL_STYLE.manual;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.bg} ${s.text}`}>
+      <span>{s.icon}</span>{s.label}
+    </span>
+  );
+}
 
 function AgendForm({ form, setForm, leads, onSubmit, loading }) {
   const inp = (id, label, type, extra = {}) => (
@@ -66,32 +83,34 @@ function formatDate(s) {
 }
 
 const STATUS_COLOR_MOBILE = {
-  marcado: 'bg-blue-100 text-blue-700',
-  confirmado: 'bg-green-100 text-green-700',
+  marcado:   'bg-blue-100 text-blue-700',
+  confirmado:'bg-green-100 text-green-700',
   cancelado: 'bg-red-100 text-red-700',
   realizado: 'bg-gray-100 text-gray-600',
 };
 
 export default function Agendamentos() {
-  const [items, setItems]         = useState([]);
-  const [leads, setLeads]         = useState([]);
+  const [items, setItems]               = useState([]);
+  const [leads, setLeads]               = useState([]);
   const [filtroData, setFiltroData]     = useState(hoje);
   const [filtroStatus, setFiltroStatus] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editId, setEditId]       = useState(null);
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [loading, setLoading]     = useState(false);
+  const [filtroCanal, setFiltroCanal]   = useState('');
+  const [modalOpen, setModalOpen]       = useState(false);
+  const [editId, setEditId]             = useState(null);
+  const [form, setForm]                 = useState(EMPTY_FORM);
+  const [loading, setLoading]           = useState(false);
   const { tenant } = useAuth();
 
   const loadItems = useCallback(async () => {
     try {
       const params = {};
-      if (filtroData) params.data = filtroData;
+      if (filtroData)   params.data   = filtroData;
       if (filtroStatus) params.status = filtroStatus;
+      if (filtroCanal)  params.canal  = filtroCanal;
       const data = await api.get('/agendamentos', params);
       setItems(data.agendamentos);
     } catch (err) { toast.error(err.message); }
-  }, [filtroData, filtroStatus]);
+  }, [filtroData, filtroStatus, filtroCanal]);
 
   useEffect(() => { loadItems(); }, [loadItems]);
 
@@ -147,6 +166,13 @@ export default function Agendamentos() {
     ? new Date(filtroData + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
     : 'Todos os dias';
 
+  // Contadores por canal para exibir nos filtros
+  const totalPorCanal = items.reduce((acc, a) => {
+    const c = a.canalOrigem || 'manual';
+    acc[c] = (acc[c] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <Layout title="Agendamentos" subtitle="Controle sua agenda de atendimentos">
 
@@ -162,7 +188,7 @@ export default function Agendamentos() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-3 mb-6 no-print">
+      <div className="flex flex-wrap gap-3 mb-4 no-print">
         <input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)}
           className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white" />
         <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
@@ -170,9 +196,18 @@ export default function Agendamentos() {
           <option value="">Todos os status</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
         </select>
-        <button onClick={() => setFiltroData('')}
+        <select value={filtroCanal} onChange={e => setFiltroCanal(e.target.value)}
+          className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white min-w-[150px]">
+          <option value="">Todos os canais</option>
+          {CANAL_OPTIONS.map(c => (
+            <option key={c} value={c}>
+              {CANAL_STYLE[c].icon} {CANAL_STYLE[c].label}
+            </option>
+          ))}
+        </select>
+        <button onClick={() => { setFiltroData(''); setFiltroStatus(''); setFiltroCanal(''); }}
           className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition bg-white">
-          Todos os dias
+          Limpar filtros
         </button>
         <div className="flex-1" />
         <button onClick={() => window.print()}
@@ -190,6 +225,23 @@ export default function Agendamentos() {
           Novo
         </button>
       </div>
+
+      {/* Pills de contagem por canal */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5 no-print">
+          {CANAL_OPTIONS.filter(c => totalPorCanal[c]).map(c => (
+            <button key={c} onClick={() => setFiltroCanal(filtroCanal === c ? '' : c)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition
+                ${filtroCanal === c
+                  ? `${CANAL_STYLE[c].bg} ${CANAL_STYLE[c].text} border-current`
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}>
+              <span>{CANAL_STYLE[c].icon}</span>
+              {CANAL_STYLE[c].label}
+              <span className="ml-0.5 font-bold">{totalPorCanal[c]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Título da data (mobile) */}
       {filtroData && (
@@ -218,13 +270,14 @@ export default function Agendamentos() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-sm mb-1">
+            <div className="flex items-center gap-3 text-sm mb-2">
               <span className="font-bold text-blue-600 text-lg">{a.hora}</span>
               <span className="text-gray-500">{formatDate(a.data)}</span>
               {a.tipo && <span className="text-gray-500">· {a.tipo}</span>}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLOR_MOBILE[a.status] || ''}`}>{a.status}</span>
+              <BadgeCanal canal={a.canalOrigem || 'manual'} />
             </div>
             {a.observacoes && <p className="text-xs text-gray-400 mt-2 line-clamp-2">{a.observacoes}</p>}
           </div>
@@ -242,13 +295,14 @@ export default function Agendamentos() {
                 <th className="px-6 py-3">Hora</th>
                 <th className="px-6 py-3">Tipo</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Canal</th>
                 <th className="px-6 py-3">Observações</th>
                 <th className="px-6 py-3 no-print">Ações</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400">Nenhum agendamento encontrado</td></tr>
+                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-400">Nenhum agendamento encontrado</td></tr>
               ) : items.map(a => (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
@@ -261,6 +315,7 @@ export default function Agendamentos() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">{a.tipo || '-'}</td>
                   <td className="px-6 py-4"><BadgeAgend status={a.status} /></td>
+                  <td className="px-6 py-4"><BadgeCanal canal={a.canalOrigem || 'manual'} /></td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{a.observacoes || '-'}</td>
                   <td className="px-6 py-4 no-print">
                     <div className="flex items-center gap-1">

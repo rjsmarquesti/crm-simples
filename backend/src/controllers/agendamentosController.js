@@ -6,9 +6,10 @@ const incluirLead = { lead: { select: { nome: true, telefone: true, email: true 
 exports.listar = async (req, res, next) => {
   try {
     const where = { tenantId: req.user.tenantId };
-    if (req.query.data) where.data = req.query.data;
-    if (req.query.status) where.status = req.query.status;
-    if (req.query.lead_id) where.leadId = Number(req.query.lead_id);
+    if (req.query.data)    where.data        = req.query.data;
+    if (req.query.status)  where.status      = req.query.status;
+    if (req.query.lead_id) where.leadId      = Number(req.query.lead_id);
+    if (req.query.canal)   where.canalOrigem = req.query.canal;
 
     const agendamentos = await prisma.agendamento.findMany({
       where, orderBy: [{ data: 'asc' }, { hora: 'asc' }], include: incluirLead,

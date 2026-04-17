@@ -61,12 +61,31 @@ async function main() {
 
     await prisma.agendamento.createMany({
       data: [
-        { tenantId: tenant.id, leadId: lead1.id, data: hoje,   hora: '09:00', tipo: 'Consulta', status: 'confirmado', observacoes: 'Primeira consulta presencial' },
-        { tenantId: tenant.id, leadId: lead2.id, data: hoje,   hora: '14:30', tipo: 'Reunião',  status: 'marcado',    observacoes: 'Apresentar proposta' },
-        { tenantId: tenant.id, leadId: lead3.id, data: amanha, hora: '10:00', tipo: 'Ligação',  status: 'marcado',    observacoes: 'Follow-up' },
+        { tenantId: tenant.id, leadId: lead1.id, data: hoje,   hora: '09:00', tipo: 'Consulta', status: 'confirmado', canalOrigem: 'manual',    observacoes: 'Primeira consulta presencial' },
+        { tenantId: tenant.id, leadId: lead2.id, data: hoje,   hora: '14:30', tipo: 'Reunião',  status: 'marcado',    canalOrigem: 'web',       observacoes: 'Apresentar proposta' },
+        { tenantId: tenant.id, leadId: lead3.id, data: amanha, hora: '10:00', tipo: 'Ligação',  status: 'marcado',    canalOrigem: 'whatsapp',  observacoes: 'Follow-up' },
       ],
     });
     console.log('✅ Agendamentos criados');
+  }
+
+  // ConfiguracaoAgenda padrão para o tenant demo
+  const configExiste = await prisma.configuracaoAgenda.findUnique({ where: { tenantId: tenant.id } });
+  if (!configExiste) {
+    await prisma.configuracaoAgenda.create({
+      data: {
+        tenantId: tenant.id,
+        horarioInicio: '08:00',
+        horarioFim: '18:00',
+        duracaoSlot: 60,
+        diasUteis: '1,2,3,4,5',
+        antecedenciaMin: 2,
+        antecedenciaMax: 30,
+        mensagemConfirmacao: 'Entraremos em contato para confirmar sua presença. Até lá!',
+        ativo: true,
+      },
+    });
+    console.log('✅ ConfiguracaoAgenda criada para tenant demo');
   }
 }
 

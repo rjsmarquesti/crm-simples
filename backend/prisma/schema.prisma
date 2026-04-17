@@ -22,9 +22,11 @@ model Tenant {
   apiToken        String?  @unique @map("api_token") @db.VarChar(255)
   createdAt       DateTime @default(now()) @map("created_at")
 
-  users        User[]
-  leads        Lead[]
-  agendamentos Agendamento[]
+  users              User[]
+  leads              Lead[]
+  agendamentos       Agendamento[]
+  configuracaoAgenda ConfiguracaoAgenda?
+  conversasWhatsapp  ConversaWhatsapp[]
 
   @@map("tenants")
 }
@@ -47,26 +49,55 @@ model User {
 
 // ─── Lead ────────────────────────────────────────────────────────────────────
 model Lead {
-  id           Int           @id @default(autoincrement())
-  tenantId     Int           @map("tenant_id")
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  nome         String        @db.VarChar(100)
-  telefone     String?       @db.VarChar(20)
-  email        String?       @db.VarChar(150)
-  origem       String?       @db.VarChar(50)
-  status       StatusLead    @default(novo)
-  observacoes  String?  @db.Text
-  cep          String?  @db.VarChar(9)
-  logradouro   String?  @db.VarChar(200)
-  numero       String?  @db.VarChar(20)
-  complemento  String?  @db.VarChar(100)
-  bairro       String?  @db.VarChar(100)
-  cidade       String?  @db.VarChar(100)
-  estado       String?  @db.VarChar(2)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          Int        @id @default(autoincrement())
+  tenantId    Int        @map("tenant_id")
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Dados básicos
+  nome        String     @db.VarChar(150)
+  telefone    String?    @db.VarChar(20)
+  telefone2   String?    @map("telefone2") @db.VarChar(20)
+  email       String?    @db.VarChar(150)
+  origem      String?    @db.VarChar(50)
+  status      StatusLead @default(novo)
+  priority    Priority   @default(normal)
+  observacoes String?    @db.Text
+  fonte       Fonte      @default(manual)
+
+  // Endereço completo
+  cep         String?    @db.VarChar(9)
+  logradouro  String?    @db.VarChar(200)
+  numero      String?    @db.VarChar(20)
+  complemento String?    @db.VarChar(100)
+  bairro      String?    @db.VarChar(100)
+  cidade      String?    @db.VarChar(100)
+  municipio   String?    @db.VarChar(100)
+  estado      String?    @db.VarChar(2)
+
+  // Dados Google Maps
+  nicho         String?  @db.VarChar(100)
+  categoria     String?  @db.VarChar(100)
+  subcategoria  String?  @db.VarChar(100)
+  googleMapsUrl String?  @map("google_maps_url") @db.VarChar(1000)
+  placeId       String?  @map("place_id") @db.VarChar(255)
+  rating        Float?
+  reviewsCount  Int?     @default(0) @map("reviews_count")
+  website       String?  @db.VarChar(500)
+
+  // Funil
+  ultimoContato  DateTime? @map("ultimo_contato")
+  proximoContato DateTime? @map("proximo_contato")
+
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
   agendamentos Agendamento[]
 
+  @@unique([placeId, tenantId])
+  @@index([nicho])
+  @@index([estado])
+  @@index([municipio])
+  @@index([fonte])
+  @@index([status])
   @@map("leads")
 }
 
@@ -82,10 +113,52 @@ model Agendamento {
   tipo        String?     @default("reunião") @db.VarChar(100)
   status      StatusAgend @default(marcado)
   observacoes String?     @db.Text
+  // Campos dual-canal
+  canalOrigem     CanalOrigem @default(manual) @map("canal_origem")
+  clienteNome     String?     @map("cliente_nome") @db.VarChar(150)
+  clienteTelefone String?     @map("cliente_telefone") @db.VarChar(20)
+  lembreteEnviado Boolean     @default(false) @map("lembrete_enviado")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
+  @@index([data, status])
+  @@index([lembreteEnviado, status])
   @@map("agendamentos")
+}
+
+// ─── ConfiguracaoAgenda (por tenant) ─────────────────────────────────────────
+model ConfiguracaoAgenda {
+  id              Int     @id @default(autoincrement())
+  tenantId        Int     @unique @map("tenant_id")
+  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  horarioInicio   String  @default("08:00") @map("horario_inicio") @db.VarChar(5)
+  horarioFim      String  @default("18:00") @map("horario_fim") @db.VarChar(5)
+  duracaoSlot     Int     @default(60) @map("duracao_slot")
+  diasUteis       String  @default("1,2,3,4,5") @map("dias_uteis") @db.VarChar(20)
+  antecedenciaMin Int     @default(2) @map("antecedencia_min")
+  antecedenciaMax Int     @default(30) @map("antecedencia_max")
+  mensagemConfirmacao String? @map("mensagem_confirmacao") @db.Text
+  whatsappAdmin   String? @map("whatsapp_admin") @db.VarChar(20)
+  ativo           Boolean @default(true)
+
+  @@map("configuracoes_agenda")
+}
+
+// ─── ConversaWhatsapp (estado da conversa em andamento) ──────────────────────
+model ConversaWhatsapp {
+  id        Int             @id @default(autoincrement())
+  tenantId  Int             @map("tenant_id")
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  telefone  String          @db.VarChar(20)
+  estado    EstadoConversa  @default(inicio)
+  dadosJson Json?           @map("dados_json")
+  expiresAt DateTime        @map("expires_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  @@unique([telefone, tenantId])
+  @@index([expiresAt])
+  @@map("conversas_whatsapp")
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -104,9 +177,25 @@ enum Role {
 enum StatusLead {
   novo
   contato
+  qualificado
+  proposta
   agendado
   convertido
   perdido
+}
+
+enum Priority {
+  baixa
+  normal
+  alta
+  urgente
+}
+
+enum Fonte {
+  google_maps
+  manual
+  csv_import
+  api
 }
 
 enum StatusAgend {
@@ -114,4 +203,20 @@ enum StatusAgend {
   confirmado
   cancelado
   realizado
+}
+
+enum CanalOrigem {
+  manual
+  web
+  whatsapp
+}
+
+enum EstadoConversa {
+  inicio
+  aguardando_data
+  aguardando_slot
+  aguardando_nome
+  aguardando_confirmacao
+  concluida
+  cancelada
 }

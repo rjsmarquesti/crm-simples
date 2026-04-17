@@ -5,6 +5,10 @@ const cors = require('cors');
 const app = express();
 app.use(cors({ exposedHeaders: ['X-Tenant-Slug'] }));
 app.use(express.json());
+app.use(express.static(require('path').join(__dirname, 'public')));
+
+// Rotas de agendamento público (sem autenticação, por slug)
+app.use('/api/public/:slug', require('./src/routes/public'));
 
 // Rotas públicas
 app.use('/api/auth', require('./src/routes/auth'));
